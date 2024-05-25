@@ -3,4 +3,5 @@
 
 #2024/5/25 Complete the homemade arduino development board and connect the LC760Z, DHT11 and soil moisture sensor to complete the serial port transmission
 ![image](https://github.com/Sadcato/Landslide-monitoring-and-early-warning-system-based-on-deep-learning/blob/main/img/WechatIMG1.jpg)
+![image](https://github.com/Sadcato/Landslide-monitoring-and-early-warning-system-based-on-deep-learning/blob/main/img/read.jpg)
 
