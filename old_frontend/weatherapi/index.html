@@ -1,0 +1,31 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山体滑坡监测与预警系统</title>
+</head>
+<body>
+    <div id="loginPage">
+        <h2>用户登录</h2>
+        <form id="loginForm">
+            <label for="username">用户名：</label>
+            <input type="text" id="username" name="username" required><br><br>
+            <label for="password">密码：</label>
+            <input type="password" id="password" name="password" required><br><br>
+            <input type="submit" value="登录">
+        </form>
+    </div>
+
+    <div id="mainPage" style="display: none;">
+        <h2>主页面</h2>
+        <input type="text" id="cityInput" placeholder="输入城市名" />
+        <button id="searchButton" onclick="fetchWeatherByCityName()">搜索</button>
+
+        <div id="weatherInfo"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

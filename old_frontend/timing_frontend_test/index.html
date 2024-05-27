@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山体滑坡检测和预警系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>您好，欢迎登陆</h1>
+        <p>今天是<span id="date">，星期<span id="weekday"></span></span></p>
+    </header>
+    <nav>
+        <a href="#real-time" class="active" onclick="displayContent(event, 'real-time')">实时监控</a>
+        <a href="#warning" onclick="displayContent(event, 'warning')">预警监测</a>
+        <a href="#equipment" onclick="displayContent(event, 'equipment')">仪器设备</a>
+    </nav>
+    <div class="container">
+        <div id="real-time" class="content active">
+            <!-- 实时监控内容 -->
+            <p>这里是实时监控的页面内容。</p>
+        </div>
+        <div id="warning" class="content">
+            <!-- 预警监测内容 -->
+            <p>这里是预警监测的页面内容。</p>
+        </div>
+        <div id="equipment" class="content">
+            <!-- 仪器设备内容 -->
+            <p>这里是仪器设备的页面内容。</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
