@@ -1,22 +1,23 @@
 from pynmeagps import NMEAReader
 from io import BytesIO
-from utils.db_utils import execute_query
 
 class GNSSData:
     def __init__(self):
+        self.gngga_data = {}
+        self.gnrmc_data = {}
         self.error = False
 
     def parse_gngga_sentence(self, nmea_sentence):
         if not nmea_sentence.startswith("$GNGGA"):
-            return None
+            return "Not a GNGGA sentence"
 
         nmea_stream = BytesIO((nmea_sentence + '\r\n').encode('ascii'))
         nmr = NMEAReader(nmea_stream)
-
+        
         try:
             raw_data = next(nmr)
             msg = raw_data[1]
-            return {
+            self.gngga_data = {
                 "Message Type": msg.msgID,
                 "UTC Time": msg.time,
                 "Latitude": msg.lat,
@@ -28,23 +29,24 @@ class GNSSData:
                 "Height of Geoid": msg.sep
             }
         except StopIteration:
-            return None
+            return "No valid NMEA sentence found"
         except Exception as e:
-            return None
+            return str(e)
 
     def parse_gnrmc_sentence(self, nmea_sentence):
         if not nmea_sentence.startswith("$GNRMC"):
-            return None
+            return "Not a GNRMC sentence"
 
         nmea_stream = BytesIO((nmea_sentence + '\r\n').encode('ascii'))
         nmr = NMEAReader(nmea_stream)
-
+        
         try:
             raw_data = next(nmr)
             msg = raw_data[1]
-            return {
+            self.gnrmc_data = {
                 "Message Type": msg.msgID,
                 "UTC Time": msg.time,
+                "Status": getattr(msg, 'status', None),
                 "Latitude": msg.lat,
                 "Longitude": msg.lon,
                 "Speed Over Ground": getattr(msg, 'spd', None),
@@ -53,42 +55,6 @@ class GNSSData:
                 "Magnetic Variation": getattr(msg, 'magvar', None)
             }
         except StopIteration:
-            return None
+            return "No valid NMEA sentence found"
         except Exception as e:
-            return None
-        
-    async def store_gnss_data(self, data):
-        if data:
-            query = """
-            INSERT INTO gnss_data (
-                message_type, 
-                utctime, 
-                latitude, 
-                longitude, 
-                fix_quality, 
-                num_of_satellites, 
-                hdop, 
-                altitude, 
-                height_of_geoid,
-                speed_over_ground, 
-                course_over_ground, 
-                date, 
-                magnetic_variation
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            args = (
-                data.get("Message Type"), 
-                data.get("UTC Time"), 
-                data.get("Latitude"), 
-                data.get("Longitude"), 
-                data.get("Fix Quality"),  
-                data.get("Number of Satellites"), 
-                data.get("HDOP"), 
-                data.get("Altitude"), 
-                data.get("Height of Geoid"),
-                data.get("Speed Over Ground"), 
-                data.get("Course Over Ground"), 
-                data.get("Date"), 
-                data.get("Magnetic Variation")
-            )
-            await execute_query(query, args)
+            return str(e)

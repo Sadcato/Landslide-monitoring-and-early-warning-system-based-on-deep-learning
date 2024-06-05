@@ -1,157 +1,168 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from services.gnss_service import retrieve_gnss_data
+from services.sensor_service import retrieve_sensor_data
 from reader.data_reader import ReadSerial
-from processor.gnss import GNSSData
-from processor.sensor import SensorData
-import threading
-import logging
+import asyncio
+from services.db_service import *
+from reader import data_reader
 app = FastAPI()
 
-# 初始化数据解析对象
-gnss_data = GNSSData()
-sensor_data = SensorData()
-
-# 创建ReadSerial实例
 data_source = ReadSerial()
 
+
 @app.on_event("startup")
-def start_reading():
-    threading.Thread(target=stream_sensor_data, daemon=True).start()
+async def start_reading():
+    """ 在应用启动时以异步方式开始串口数据读取和处理 """
+    asyncio.create_task(data_source.process_and_store_data())
 
-def stream_sensor_data():
-    for data in data_source.read_data():
-        process_data(data)
-
-def process_data(data):
-    try:
-        if data.startswith("$GNGGA"):
-            gnss_data.parse_gngga_sentence(data)
-        elif data.startswith("$GNRMC"):
-            gnss_data.parse_gnrmc_sentence(data)
-        elif data.startswith("$TEMP"):
-            sensor_data.update_sensor_data(data)
-        elif data.startswith("$HUMIDITY"):
-            sensor_data.update_sensor_data(data)
-        elif data.startswith("$SOILHUM"):
-            sensor_data.update_sensor_data(data)
-    except Exception as e:
-        logging.error(f"Error processing data: {e}")
-        gnss_data.error = True
-        sensor_data.error = True
 
 
 
 # GNSS数据端点
 
-# @app.get("/api/gnss/Message Type")
-# def get_gnss_message_type():
-#     return {"Message Type": gnss_data.gngga_data.get("Message Type") or gnss_data.gnrmc_data.get("Message Type")}
-@app.get("/api/gnss/Message Type")
-def get_gnss_message_type():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Message Type": gnss_data.gngga_data.get("Message Type")}
+@app.get("/api/gnss/Message_Type")
+async def get_gnss_Message_Type():
+    try:
+        Message_Type = await get_latest_gnss_Message_Type()
+        if Message_Type is None:
+            return {"err": "No Message Type data available"}
+        return {"Message Type": Message_Type}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 
-# @app.get("/api/gnss/UTC Time")
-# def get_gnss_utc_time():
-#     return {"UTC Time": gnss_data.gngga_data.get("UTC Time") or gnss_data.gnrmc_data.get("UTC Time")}
-@app.get("/api/gnss/UTC Time")
-def get_gnss_utc_time():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"UTC Time": gnss_data.gngga_data.get("UTC Time")}
+@app.get("/api/gnss/UTC_Time")
+async def get_gnss_UTC_Time():
+    try:
+        UTC_Time = await get_latest_gnss_UTC_Time()
+        if UTC_Time is None:
+            return {"err": "No UTC Time data available"}
+        return {"UTC Time": UTC_Time}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/gnss/Magnetic Variation")
-def get_gnss_magnetic_variation():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Magnetic Variation": gnss_data.gnrmc_data.get("Magnetic Variation")}
+@app.get("/api/gnss/Magnetic_Variation")
+async def get_gnss_Magnetic_Variation():
+    try:
+        Magnetic_Variation = await get_latest_gnss_Magnetic_Variation()
+        if Magnetic_Variation is None:
+            return {"err": "No Magnetic Variation data available"}
+        return {"Magnetic Variation": Magnetic_Variation}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/api/gnss/Latitude")
-# def get_gnss_latitude():
-#     return {"Latitude": gnss_data.gngga_data.get("Latitude") or gnss_data.gnrmc_data.get("Latitude")}
+
 @app.get("/api/gnss/Latitude")
-def get_gnss_latitude():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Latitude": gnss_data.gngga_data.get("Latitude")}
+async def get_gnss_Latitude():
+    try:
+        Latitude = await get_latest_gnss_Latitude()
+        if Latitude is None:
+            return {"err": "No Latitude data available"}
+        return {"Latitude": Latitude}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# @app.get("/api/gnss/Longitude")
-# def get_gnss_longitude():
-#     return {"Longitude": gnss_data.gngga_data.get("Longitude") or gnss_data.gnrmc_data.get("Longitude")}
+
 @app.get("/api/gnss/Longitude")
-def get_gnss_longitude():
-    if gnss_data.error:
-        gnss_data.error = False 
-        return {"err": "err"}
-    return {"Longitude": gnss_data.gngga_data.get("Longitude")}
+async def get_gnss_Longitude():
+    try:
+        Longitude = await get_latest_gnss_Longitude()
+        if Longitude is None:
+            return {"err": "No Longitude data available"}
+        return {"Longitude": Longitude}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/gnss/Fix Quality")
-def get_gnss_fix_quality():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Fix Quality": gnss_data.gngga_data.get("Fix Quality")}
+@app.get("/api/gnss/Fix_Quality")
+async def get_gnss_Fix_Quality():
+    try:
+        Fix_Quality = await get_latest_gnss_Fix_Quality()
+        if Fix_Quality is None:
+            return {"err": "No Fix Quality data available"}
+        return {"Fix Quality": Fix_Quality}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/gnss/Number of Satellites")
-def get_gnss_number_of_satellites():
-    if gnss_data.error:
-        gnss_data.error = False 
-        return {"err": "err"}
-    return {"Number of Satellites": gnss_data.gngga_data.get("Number of Satellites")}
+@app.get("/api/gnss/Number_of_Satellites")
+async def get_gnss_Number_of_Satellites():
+    try:
+        Number_of_Satellites = await get_latest_gnss_Number_of_Satellites()
+        if Number_of_Satellites is None:
+            return {"err": "No Number of Satellites data available"}
+        return {"Number of Satellites": Number_of_Satellites}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/gnss/HDOP")
-def get_gnss_hdop():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"HDOP": gnss_data.gngga_data.get("HDOP")}
+async def get_gnss_hdop():
+    """ 从数据库中获取最新的HDOP值 """
+    try:
+        hdop = await get_latest_gnss_HDOP()
+        if hdop is None:
+            return {"err": "No HDOP data available"}
+        return {"HDOP": hdop}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/gnss/Altitude")
-def get_gnss_altitude():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Altitude": gnss_data.gngga_data.get("Altitude")}
+async def get_gnss_Altitude():
+    try:
+        Altitude = await get_latest_gnss_Altitude()
+        if Altitude is None:
+            return {"err": "No Altitude data available"}
+        return {"Altitude": Altitude}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/gnss/Height of Geoid")
-def get_gnss_height_of_geoid():
-    if gnss_data.error:
-        gnss_data.error = False 
-        return {"err": "err"}
-    return {"Height of Geoid": gnss_data.gngga_data.get("Height of Geoid")}
+@app.get("/api/gnss/Height_of_Geoid")
+async def get_gnss_Height_of_Geoid():
+    try:
+        Height_of_Geoid = await get_latest_gnss_Height_of_Geoid()
+        if Height_of_Geoid is None:
+            return {"err": "No Height_of_Geoid data available"}
+        return {"Height_of_Geoid": Height_of_Geoid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/gnss/Status")
-def get_gnss_status():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Status": gnss_data.gnrmc_data.get("Status")}
+async def get_gnss_Status():
+    try:
+        Status = await get_latest_gnss_Status()
+        if Status is None:
+            return {"err": "No Status data available"}
+        return {"Status": Status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/gnss/Speed Over Ground")
-def get_gnss_speed_over_ground():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Speed Over Ground": gnss_data.gnrmc_data.get("Speed Over Ground")}
+@app.get("/api/gnss/Speed_Over_Ground")
+async def get_gnss_Speed_Over_Ground():
+    try:
+        Speed_Over_Ground = await get_latest_gnss_Speed_Over_Ground()
+        if Speed_Over_Ground is None:
+            return {"err": "No Speed_Over_Ground data available"}
+        return {"Speed_Over_Ground": Speed_Over_Ground}
+    except Exception as e:
+        raise HTTPException(Speed_Over_Ground_code=500, detail=str(e))
 
-@app.get("/api/gnss/Course Over Ground")
-def get_gnss_course_over_ground():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Course Over Ground": gnss_data.gnrmc_data.get("Course Over Ground")}
+@app.get("/api/gnss/Course_Over_Ground")
+async def get_gnss_Course_Over_Ground():
+    try:
+        Course_Over_Ground = await get_latest_gnss_Course_Over_Ground()
+        if Course_Over_Ground is None:
+            return {"err": "No Course_Over_Ground data available"}
+        return {"Course_Over_Ground": Course_Over_Ground}
+    except Exception as e:
+        raise HTTPException(Course_Over_Ground_code=500, detail=str(e))
 
 @app.get("/api/gnss/Date")
-def get_gnss_date():
-    if gnss_data.error:
-        gnss_data.error = False  
-        return {"err": "err"}
-    return {"Date": gnss_data.gnrmc_data.get("Date")}
+async def get_gnss_Date():
+    try:
+        Date = await get_latest_gnss_Date()
+        if Date is None:
+            return {"err": "No Date data available"}
+        return {"Date": Date}
+    except Exception as e:
+        raise HTTPException(Date_code=500, detail=str(e))
 
 
 
@@ -161,22 +172,54 @@ def get_gnss_date():
 # 传感器数据端点
 
 @app.get("/api/sensor/Temperature")
-def get_sensor_temperature():
-    if sensor_data.error:
-        sensor_data.error = False  # 重置错误标志
-        return {"err": "err"}
-    return {"Temperature": sensor_data.get_latest_temp()}
+async def get_sensor_Temperature():
+    """ 从数据库中获取最新的温度值 """
+    try:
+        temperature = await get_latest_Temperature()
+        if temperature is None:
+            return {"error": "No temperature data available"}
+        return {"Temperature": temperature}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/sensor/Humidity")
-def get_sensor_humidity():
-    if sensor_data.error:
-        sensor_data.error = False  # 重置错误标志
-        return {"err": "err"}
-    return {"Humidity": sensor_data.get_latest_humidity()}
+async def get_sensor_Humidity():
+    try:
+        Humidity = await get_latest_Humidity()
+        if Humidity is None:
+            return {"error": "No Humidity data available"}
+        return {"Humidity": Humidity}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/sensor/Soil Humidity")
-def get_sensor_soil_humidity():
-    if sensor_data.error:
-        sensor_data.error = False  # 重置错误标志
-        return {"err": "err"}
-    return {"Soil Humidity": sensor_data.get_latest_soil_humidity()}
+@app.get("/api/sensor/Soil_Humidity")
+async def get_sensor_Soil_Humidity():
+    try:
+        Soil_Humidity = await get_latest_Soil_Humidity()
+        if Soil_Humidity is None:
+            return {"error": "No Soil_Humidity data available"}
+        return {"Soil_Humidity": Soil_Humidity}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+from services.gnss_service import retrieve_gnss_data
+from services.sensor_service import retrieve_sensor_data
+
+@app.get("/api/gnss/history")
+async def get_gnss_history():
+    """ 获取历史GNSS数据 """
+    try:
+        data = await retrieve_gnss_data()
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/sensor/history")
+async def get_sensor_history():
+    """ 获取历史传感器数据 """
+    try:
+        data = await retrieve_sensor_data()
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

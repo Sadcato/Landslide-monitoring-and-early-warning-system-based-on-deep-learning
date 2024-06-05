@@ -1,7 +1,3 @@
-from utils.db_utils import execute_query
-import datetime
-
-
 class SensorData:
     def __init__(self):
         self.temp = []
@@ -14,12 +10,11 @@ class SensorData:
         sensor_type = parts[0]
         values = [float(val) if '.' in val else int(val) for val in parts[1:]]
         if sensor_type == "$TEMP":
-            return {"Temperature": values[-1] if values else None}
+            self.temp = values
         elif sensor_type == "$HUMIDITY":
-            return {"Humidity": values[-1] if values else None}
+            self.humidity = values
         elif sensor_type == "$SOILHUM":
-            return {"Soil Humidity": values[-1] if values else None}
-        return None
+            self.soil_humidity = values
 
     def get_latest_temp(self):
         return self.temp[-1] if self.temp else None
@@ -29,11 +24,3 @@ class SensorData:
 
     def get_latest_soil_humidity(self):
         return self.soil_humidity[-1] if self.soil_humidity else None
-    
-    async def store_sensor_data(sensor_data):
-        timestamp = datetime.datetime.now()
-        query = """
-        INSERT INTO sensor_data (timestamp, temperature, humidity, soil_humidity)
-        VALUES (%s, %s, %s, %s)
-        """
-        await execute_query(query, (timestamp, sensor_data['Temperature'], sensor_data['Humidity'], sensor_data['Soil Humidity']))
