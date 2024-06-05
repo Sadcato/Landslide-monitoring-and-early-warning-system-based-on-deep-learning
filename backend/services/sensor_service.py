@@ -1,4 +1,3 @@
-# services/sensor_service.py
 from utils.db_utils import execute_query
 
 

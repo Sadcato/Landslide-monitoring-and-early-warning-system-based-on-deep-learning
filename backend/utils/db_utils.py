@@ -1,4 +1,3 @@
-# utils/db_utils.py
 import aiomysql
 
 async def get_db_connection():

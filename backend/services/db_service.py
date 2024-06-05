@@ -1,4 +1,3 @@
-# services/db_service.py
 from utils.db_utils import execute_query
 
 async def store_gnss_data(gnss_data):
