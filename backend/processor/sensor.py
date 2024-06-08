@@ -1,5 +1,6 @@
-from utils.db_utils import execute_query
 import datetime
+from utils.db_utils import execute_query
+
 
 
 class SensorData:
@@ -12,14 +13,24 @@ class SensorData:
     def update_sensor_data(self, data_str):
         parts = data_str.split(',')
         sensor_type = parts[0]
-        values = [float(val) if '.' in val else int(val) for val in parts[1:]]
+        try:
+            values = [float(val) if '.' in val else int(val) for val in parts[1:] if val.replace('.', '').isdigit()]
+        except ValueError as e:
+            print(f"Error processing sensor data: {data_str} -> {e}")
+            return None
+
         if sensor_type == "$TEMP":
-            return {"Temperature": values[-1] if values else None}
+            self.temp = values
         elif sensor_type == "$HUMIDITY":
-            return {"Humidity": values[-1] if values else None}
+            self.humidity = values
         elif sensor_type == "$SOILHUM":
-            return {"Soil Humidity": values[-1] if values else None}
-        return None
+            self.soil_humidity = values
+
+        return {
+            "Temperature": self.get_latest_temp(),
+            "Humidity": self.get_latest_humidity(),
+            "Soil Humidity": self.get_latest_soil_humidity()
+        }
 
     def get_latest_temp(self):
         return self.temp[-1] if self.temp else None
@@ -30,10 +41,12 @@ class SensorData:
     def get_latest_soil_humidity(self):
         return self.soil_humidity[-1] if self.soil_humidity else None
     
-    async def store_sensor_data(sensor_data):
+
+    async def store_sensor_data(self,sensor_data):
         timestamp = datetime.datetime.now()
         query = """
         INSERT INTO sensor_data (timestamp, temperature, humidity, soil_humidity)
         VALUES (%s, %s, %s, %s)
         """
         await execute_query(query, (timestamp, sensor_data['Temperature'], sensor_data['Humidity'], sensor_data['Soil Humidity']))
+
