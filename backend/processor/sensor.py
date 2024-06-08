@@ -41,7 +41,7 @@ class SensorData:
     def get_latest_soil_humidity(self):
         return self.soil_humidity[-1] if self.soil_humidity else None
     
-
+    """插入sensor数据"""
     async def store_sensor_data(self,sensor_data):
         timestamp = datetime.datetime.now()
         query = """

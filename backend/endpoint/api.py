@@ -1,6 +1,4 @@
-from fastapi import FastAPI, HTTPException, WebSocket,WebSocketDisconnect
-from services_extract.gnss_service import retrieve_gnss_data
-from services_extract.sensor_service import retrieve_sensor_data
+from fastapi import FastAPI,WebSocket,WebSocketDisconnect
 from reader.data_reader import ReadSerial
 import asyncio
 from services_extract.db_service import *
@@ -16,6 +14,12 @@ async def start_reading():
     """ 在应用启动时以异步方式开始串口数据读取和处理 """
     asyncio.create_task(data_source.process_and_store_data())
 
+    """ 优雅关闭任务确保所有后台任务都能正常关闭"""
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Shutting down: cancelling background tasks...")
+    # task.cancel()
+    print("All background tasks cancelled.")
 
 
 
@@ -40,23 +44,6 @@ async def websocket_gnss_message_type(websocket: WebSocket):
         await websocket.close(code=1011)  # 发送适当的WebSocket关闭码
     
 
-@app.websocket("/ws/gnss/UTC_Time")
-async def websocket_gnss_utc_time(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            # 获取最新的GNSS UTC时间数据
-            UTC_Time = await get_latest_gnss_UTC_Time()
-            if UTC_Time is None:
-                await websocket.send_json({"err": "No UTC Time data available"})
-            else:
-                await websocket.send_json({"UTC Time": UTC_Time})
-            await asyncio.sleep(1)  # 设置适当的间隔以避免过载
-    except WebSocketDisconnect:
-        print("Client disconnected")
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # 发送适当的WebSocket关闭码
 
 
 
@@ -66,19 +53,17 @@ async def websocket_gnss_latitude(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # 获取最新的GNSS纬度数据
             Latitude = await get_latest_gnss_Latitude()
             if Latitude is None:
                 await websocket.send_json({"err": "No Latitude data available"})
             else:
                 await websocket.send_json({"Latitude": Latitude})
-            await asyncio.sleep(1)  # 调整此值以控制发送频率
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # 发送适当的WebSocket关闭码
-
+        await websocket.close(code=1011) 
 
 @app.websocket("/ws/gnss/Longitude")
 async def websocket_gnss_longitude(websocket: WebSocket):
@@ -90,12 +75,12 @@ async def websocket_gnss_longitude(websocket: WebSocket):
                 await websocket.send_json({"err": "No Longitude data available"})
             else:
                 await websocket.send_json({"Longitude": Longitude})
-            await asyncio.sleep(1)  # Update interval
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("WebSocket disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # Internal server error
+        await websocket.close(code=1011) 
 
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -105,18 +90,17 @@ async def websocket_gnss_fix_quality(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # 获取最新的GNSS Fix Quality数据
             Fix_Quality = await get_latest_gnss_Fix_Quality()
             if Fix_Quality is None:
                 await websocket.send_json({"err": "No Fix Quality data available"})
             else:
                 await websocket.send_json({"Fix Quality": Fix_Quality})
-            await asyncio.sleep(1)  # 控制发送数据的频率
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # 使用适当的WebSocket关闭码
+        await websocket.close(code=1011)  
 
 
 @app.websocket("/ws/gnss/Number_of_Satellites")
@@ -124,18 +108,18 @@ async def websocket_gnss_number_of_satellites(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # 获取最新的GNSS卫星数量数据
             Number_of_Satellites = await get_latest_gnss_Number_of_Satellites()
             if Number_of_Satellites is None:
                 await websocket.send_json({"err": "No Number of Satellites data available"})
             else:
                 await websocket.send_json({"Number of Satellites": Number_of_Satellites})
-            await asyncio.sleep(1)  # 根据需要调整更新频率
+            await asyncio.sleep(1)  
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # 发送适当的WebSocket关闭码
+        await websocket.close(code=1011)  
+
 
 @app.websocket("/ws/gnss/HDOP")
 async def websocket_gnss_hdop(websocket: WebSocket):
@@ -147,12 +131,12 @@ async def websocket_gnss_hdop(websocket: WebSocket):
                 await websocket.send_json({"err": "No HDOP data available"})
             else:
                 await websocket.send_json({"HDOP": hdop})
-            await asyncio.sleep(1)  # Update interval
+            await asyncio.sleep(1)  
     except WebSocketDisconnect:
         print("WebSocket disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # Internal server error
+        await websocket.close(code=1011) 
 
 
 @app.websocket("/ws/gnss/altitude")
@@ -165,7 +149,7 @@ async def websocket_gnss_altitude(websocket: WebSocket):
                 await websocket.send_json({"err": "No Altitude data available"})
             else:
                 await websocket.send_json({"Altitude": Altitude})
-            await asyncio.sleep(1)  # Adjust frequency based on requirements
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("Client disconnected - Altitude stream")
     except Exception as e:
@@ -183,7 +167,7 @@ async def websocket_gnss_height_of_geoid(websocket: WebSocket):
                 await websocket.send_json({"err": "No Height of Geoid data available"})
             else:
                 await websocket.send_json({"Height_of_Geoid": Height_of_Geoid})
-            await asyncio.sleep(1)  # Adjust frequency based on requirements
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("Client disconnected - Height of Geoid stream")
     except Exception as e:
@@ -228,33 +212,7 @@ async def websocket_gnss_course_over_ground(websocket: WebSocket):
         await websocket.close()
 
 
-from datetime import datetime
-
-@app.websocket("/ws/gnss/Date")
-async def websocket_gnss_date(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            date_obj = await get_latest_gnss_Date()  # 假设返回的是 datetime.date 对象或 None
-            if date_obj is None:
-                await websocket.send_json({"error": "No Date data available"})
-            else:
-                date_str = date_obj.strftime('%Y-%m-%d')  # 将 date 对象转换为字符串
-                await websocket.send_json({"Date": date_str})
-            await asyncio.sleep(1)  # Update interval
-    except WebSocketDisconnect:
-        print("WebSocket disconnected")
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        await websocket.close(code=1011)
-
-
-
-
-
-
-
-# 传感器数据端点
+    ''' 传感器数据端点 '''
 
 @app.websocket("/ws/sensor/Temperature")
 async def websocket_sensor_temperature(websocket: WebSocket):
@@ -266,12 +224,12 @@ async def websocket_sensor_temperature(websocket: WebSocket):
                 await websocket.send_json({"error": "No temperature data available"})
             else:
                 await websocket.send_json({"Temperature": temperature})
-            await asyncio.sleep(1)  # Update interval
+            await asyncio.sleep(1)  
     except WebSocketDisconnect:
         print("WebSocket disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # Internal server error
+        await websocket.close(code=1011) 
 
 
 @app.websocket("/ws/sensor/humidity")
@@ -279,31 +237,29 @@ async def websocket_sensor_humidity(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # 获取最新的湿度数据
             Humidity = await get_latest_Humidity()
             if Humidity is None:
                 await websocket.send_json({"error": "No Humidity data available"})
             else:
                 await websocket.send_json({"Humidity": Humidity})
-            await asyncio.sleep(1)  # 控制数据发送频率
+            await asyncio.sleep(1) 
     except WebSocketDisconnect:
         print("Client disconnected")
     except Exception as e:
         print(f"Error: {str(e)}")
-        await websocket.close(code=1011)  # 发送适当的WebSocket关闭码
+        await websocket.close(code=1011) 
 
 @app.websocket("/ws/sensor/Soil_Humidity")
 async def websocket_soil_humidity(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            # 获取最新的土壤湿度数据
             Soil_Humidity = await get_latest_Soil_Humidity()
             if Soil_Humidity is None:
                 await websocket.send_json({"error": "No Soil_Humidity data available"})
             else:
                 await websocket.send_json({"Soil_Humidity": Soil_Humidity})
-            await asyncio.sleep(1)  # 控制更新频率
+            await asyncio.sleep(1)  
     except WebSocketDisconnect:
         print("Client disconnected from soil humidity stream")
     except Exception as e:
@@ -311,58 +267,19 @@ async def websocket_soil_humidity(websocket: WebSocket):
         await websocket.close(code=1011)
 
 
-# from services_extract.gnss_service import retrieve_gnss_data
-# from services_extract.sensor_service import retrieve_sensor_data
-
-# @app.websocket("/ws/gnss/history")
-# async def websocket_gnss_history(websocket: WebSocket):
-#     await websocket.accept()  # 接受WebSocket连接
-#     try:
-#         # 这里假设 retrieve_gnss_data() 是异步的，并且返回历史GNSS数据
-#         data = await retrieve_gnss_data()
-#         if data:
-#             await websocket.send_json({"data": data})
-#         else:
-#             await websocket.send_json({"error": "No GNSS history data available"})
-#     except Exception as e:
-#         # 使用 WebSocket 发送错误消息
-#         await websocket.send_json({"error": str(e)})
-#     finally:
-#         await websocket.close(code=1011) 
-
-# from fastapi import WebSocket
-
-# @app.websocket("/ws/sensor/history")
-# async def websocket_sensor_history(websocket: WebSocket):
-#     await websocket.accept()  # 接受WebSocket连接
-#     try:
-#         # 这里假设 retrieve_sensor_data() 是异步的，并且返回历史传感器数据
-#         data = await retrieve_sensor_data()
-#         if data:
-#             await websocket.send_json({"data": data})
-#         else:
-#             await websocket.send_json({"error": "No sensor history data available"})
-#     except Exception as e:
-#         # 使用 WebSocket 发送错误消息
-#         await websocket.send_json({"error": str(e)})
-#     finally:
-#         await websocket.close(code=1011)  # 适当的关闭代码
-
-# @app.get("/api/sensor/history")
-# async def get_sensor_history():
-#     """ 获取历史传感器数据 """
-#     try:
-#         data = await retrieve_sensor_data()
-#         return {"data": data}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-# @app.get("/api/gnss/Message_Type")
-# async def get_gnss_Message_Type():
-#     try:
-#         Message_Type = await get_latest_gnss_Message_Type()
-#         if Message_Type is None:
-#             return {"err": "No Message Type data available"}
-#         return {"Message Type": Message_Type}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+@app.websocket("/ws/risk")
+async def websocket_risk_status(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            risk_status = await get_latest_risk_status()
+            if risk_status is None:
+                await websocket.send_json({"error": "No risk_status data available"})
+            else:
+                await websocket.send_json({"risk_status": risk_status})
+            await asyncio.sleep(1)  
+    except WebSocketDisconnect:
+        print("Client disconnected from risk_status stream")
+    except Exception as e:
+        print(f"Error in risk_status stream: {str(e)}")
+        await websocket.close(code=1011)
