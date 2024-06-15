@@ -10,7 +10,7 @@ class GNSSData:
 
  
 
-    from datetime import datetime
+    from datetime import datetime, timedelta
    
     def parse_gngga_sentence(self, nmea_sentence):
         if not nmea_sentence.startswith("$GNGGA"):
@@ -47,12 +47,12 @@ class GNSSData:
             raw_data = next(nmr)
             msg = raw_data[1]
             speed_over_ground_knots = getattr(msg, 'spd', None)
-            """转换节为米每秒,1节 = 0.51444 米每秒"""
-            speed_over_ground_mps = float(speed_over_ground_knots) * 0.51444 if speed_over_ground_knots is not None else None
+            """转换节为厘米每秒,1节 = 51.444 厘米每秒"""
+            speed_over_ground_mps = float(speed_over_ground_knots) * 51.444 if speed_over_ground_knots is not None else 0.0
             return {
             "Message Type": msg.msgID,
             "Speed Over Ground": speed_over_ground_mps,
-            "Course Over Ground": float(msg.cog) if msg.cog else None,
+            "Course Over Ground": float(msg.cog) if msg.cog else 0.0,
             "Date": msg.date.strftime('%Y-%m-%d') if msg.date else None
         }
         except StopIteration:
@@ -60,15 +60,15 @@ class GNSSData:
         except Exception as e:
             return None
  
-    async def store_gnss_data(self,data):
+    async def store_gnss_data(self,data,timestamp):
         if data:
             hdop = data.get("HDOP")
             '''检查HDOP值,当其大于10时则不继续执行插入数据库的操作'''
-            if hdop is not None and hdop > 10:
+            if hdop is not None and hdop > 5:
                 logging.info(f'Skipped data with high HDOP value: {hdop}')
                 return  
             
-            timestamp = datetime.datetime.now()
+           
             '''插入GGA数据'''
 
             if data.get("Message Type") == "GGA":

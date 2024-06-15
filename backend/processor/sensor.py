@@ -42,11 +42,12 @@ class SensorData:
         return self.soil_humidity[-1] if self.soil_humidity else None
     
     """插入sensor数据"""
-    async def store_sensor_data(self,sensor_data):
-        timestamp = datetime.datetime.now()
+    async def store_sensor_data(self,sensor_data,timestamp):
+
+        timestamp 
         query = """
         INSERT INTO sensor_data (timestamp, temperature, humidity, soil_humidity)
         VALUES (%s, %s, %s, %s)
         """
         await execute_query(query, (timestamp, sensor_data['Temperature'], sensor_data['Humidity'], sensor_data['Soil Humidity']))
-
+     
