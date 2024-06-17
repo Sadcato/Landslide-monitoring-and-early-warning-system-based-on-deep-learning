@@ -70,6 +70,13 @@ async def get_latest_Soil_Humidity():
     return result[0][0] if result else None
 
 async def get_latest_risk_status():
-    query = "SELECT * FROM landslide_risk_status"
-    result = await execute_query(query)
-    return result[0][0] if result else None
+    query = """
+    SELECT id, risk_score FROM landslide_risk_status
+    ORDER BY id DESC
+    LIMIT 100
+    """
+    results = await execute_query(query)
+    if not results:
+        return None
+    formatted_results = [{"x": row[0], "y": row[1]} for row in results]
+    return formatted_results

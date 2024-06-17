@@ -1,22 +1,37 @@
-from fastapi import FastAPI, Response, HTTPException,WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import asyncio
+import logging
 
 from reader.data_reader import ReadSerial
 from services_extract.db_service import *
 
+# 初始化日志记录
+logging.basicConfig(filename='gnss_data.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
+
 app = FastAPI()
 data_source = ReadSerial()
 
+# 添加CORS中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有来源访问
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有请求头
+)
+
 @app.on_event("startup")
 async def start_reading():
+    logging.info("Starting data reading process")
     asyncio.create_task(data_source.process_and_store_data())
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("Shutting down: cancelling background tasks...")
+    logging.info("Shutting down: cancelling background tasks...")
     # Here you would actually cancel the tasks
-    print("All background tasks cancelled.")
+    logging.info("All background tasks cancelled.")
 
 def sse_format(data: dict) -> str:
     """Format the dictionary data into SSE format."""
@@ -24,11 +39,15 @@ def sse_format(data: dict) -> str:
 
 async def fetch_latest_data(data_fetcher):
     while True:
-        data = await data_fetcher()
-        if data is None:
-            yield sse_format({"error": "No data available"})
-        else:
-            yield sse_format(data)
+        try:
+            data = await data_fetcher()
+            if data is None:
+                yield sse_format({"error": "No data available"})
+            else:
+                yield sse_format(data)
+        except Exception as e:
+            logging.error(f"Error fetching data: {e}")
+            yield sse_format({"error": str(e)})
         await asyncio.sleep(1)  # Refresh rate
 
 @app.get("/api/gnss/message_type", response_class=Response)
@@ -49,7 +68,26 @@ async def sse_gnss_fix_quality():
 
 @app.get("/api/gnss/number_of_satellites", response_class=Response)
 async def sse_gnss_number_of_satellites():
-    return StreamingResponse(fetch_latest_data(get_latest_gnss_Number_of_Satellites), media_type="text/event-stream")
+    logging.info("Handling /api/gnss/number_of_satellites request")
+
+    # 在函数内部配置跨域
+    cors_handler = CORSMiddleware(
+        app=Response,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["get"],
+        allow_headers=["*"],
+    )
+
+    try:
+        response = cors_handler.add_middleware(
+            StreamingResponse(fetch_latest_data(get_latest_gnss_Number_of_Satellites), media_type="text/event-stream")
+        )
+        logging.info("Successfully set up StreamingResponse for /api/gnss/number_of_satellites")
+        return response
+    except Exception as e:
+        logging.error(f"Error setting up StreamingResponse for /api/gnss/number_of_satellites: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/api/gnss/hdop", response_class=Response)
 async def sse_gnss_hdop():
@@ -100,7 +138,7 @@ async def websocket_risk_status(websocket: WebSocket):
                 await websocket.send_json({"risk_status": risk_status})
             await asyncio.sleep(1)  # Adjust the sleep time as necessary
     except WebSocketDisconnect:
-        print("Client disconnected from risk_status stream")
+        logging.info("Client disconnected from risk_status stream")
     except Exception as e:
-        print(f"Error in risk_status stream: {str(e)}")
+        logging.error(f"Error in risk_status stream: {str(e)}")
         await websocket.close(code=1011)
