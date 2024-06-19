@@ -1,4 +1,5 @@
 # Landslide-monitoring-and-early-warning-system-based-on-deep-learning  
+#山体滑坡的监测和预警系统
 #mcu:ATmega328p  
 #sensor:LC760Z(GPS);DH11;YL-69soil moisture sensor  
 #demo board:ls2k1000(龙芯教育派)  
