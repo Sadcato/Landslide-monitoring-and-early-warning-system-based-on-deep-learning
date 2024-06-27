@@ -1,36 +1,35 @@
-from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import logging
-
 from reader.data_reader import ReadSerial
 from services_extract.db_service import *
 
-# 初始化日志记录
+# Initialize logging
 logging.basicConfig(filename='gnss_data.log', level=logging.INFO, format='%(asctime)s:%(levelname)s:%(message)s')
 
 app = FastAPI()
 data_source = ReadSerial()
 
-# 添加CORS中间件
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源访问
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # 允许所有HTTP方法
-    allow_headers=["*"],  # 允许所有请求头
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.on_event("startup")
-async def start_reading():
+async def startup_event():
     logging.info("Starting data reading process")
-    asyncio.create_task(data_source.process_and_store_data())
+    data_source.start_task()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     logging.info("Shutting down: cancelling background tasks...")
-    # Here you would actually cancel the tasks
+    data_source.cancel_task()
     logging.info("All background tasks cancelled.")
 
 def sse_format(data: dict) -> str:
@@ -69,20 +68,8 @@ async def sse_gnss_fix_quality():
 @app.get("/api/gnss/number_of_satellites", response_class=Response)
 async def sse_gnss_number_of_satellites():
     logging.info("Handling /api/gnss/number_of_satellites request")
-
-    # 在函数内部配置跨域
-    cors_handler = CORSMiddleware(
-        app=Response,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["get"],
-        allow_headers=["*"],
-    )
-
     try:
-        response = cors_handler.add_middleware(
-            StreamingResponse(fetch_latest_data(get_latest_gnss_Number_of_Satellites), media_type="text/event-stream")
-        )
+        response = StreamingResponse(fetch_latest_data(get_latest_gnss_Number_of_Satellites), media_type="text/event-stream")
         logging.info("Successfully set up StreamingResponse for /api/gnss/number_of_satellites")
         return response
     except Exception as e:
@@ -124,7 +111,6 @@ async def sse_sensor_soil_humidity():
 @app.get("/api/risk", response_class=Response)
 async def sse_risk_status():
     return StreamingResponse(fetch_latest_data(get_latest_risk_status), media_type="text/event-stream")
-
 
 @app.websocket("/ws/risk")
 async def websocket_risk_status(websocket: WebSocket):

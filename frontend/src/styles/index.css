@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@font-face {
+  font-family: "Noto Serif SC";
+  src: url("https://registry.npmmirror.com/@fontsource/noto-serif-sc/5.0.3/files/files/noto-serif-sc-chinese-simplified-400-normal.woff2")
+    format("truetype");
+}
+@layer base {
+  html {
+    font-family: "Noto Serif SC", "FangSong", system-ui, sans-serif;
+  }
+}
